@@ -10,8 +10,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
+
+import static ohm.softa.a11.openmensa.OpenMensaAPIService.getInstance;
 
 /**
  * @author Peter Kurfer
@@ -57,23 +58,51 @@ public class App {
 		 * at first get a page without an index to be able to extract the required pagination information
 		 * afterwards you can iterate the remaining pages
 		 * keep in mind that you should await the process as the user has to select canteen with a specific id */
-		CompletableFuture<Response<List<Canteen>>> response = OpenMensaAPIService.getInstance().getOpenMensaAPI().getCanteens();
-		Response<List<Canteen>> canteensRes = null;
-		try {
-			canteensRes = response.get();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (ExecutionException e) {
-			e.printStackTrace();
-		}
-		PageInfo pageINfo = PageInfo.extractFromResponse(canteensRes);
-		System.out.println(pageINfo.toString());
+		getInstance().getOpenMensaAPI().getCanteens().thenApply(PageInfo::extractFromResponse).thenApply(pI ->{
+			for(int i = 0; i < pI.getTotalCountOfPages(); i++){
+				 getInstance().getOpenMensaAPI().getCanteens(i).thenApply(page->{
+					page.forEach(System.out::println);
+					return page;
+				});
+			}
+			return  pI;
+		});
+
+		getInstance().getOpenMensaAPI().getCanteens().thenApply(res->{
+			Response<List<Canteen>> canteensRes = res;
+			PageInfo pageINfo = PageInfo.extractFromResponse(canteensRes);
+
+			for(int i = 0; i < pageINfo.getTotalCountOfPages(); i++){
+				getInstance().getOpenMensaAPI().getCanteens(i).thenApply(page->{
+					page.forEach(System.out::println);
+					return page;
+				});
+			}
+			return  canteensRes;
+		});
+
 	}
 
 	private static void printMeals() {
 		/* TODO fetch all meals for the currently selected canteen
 		 * to avoid errors retrieve at first the state of the canteen and check if the canteen is opened at the selected day
 		 * don't forget to check if a canteen was selected previously! */
+
+
+		final String timeStr = dateFormat.format(currentDate.getTime());
+		openMensaAPI.getCanteenState(currentCanteenId, timeStr ).thenApply(state ->
+		{
+			if(!state.isClosed()){
+				openMensaAPI.getMeals(currentCanteenId, timeStr ).thenApply(meals ->
+				{
+					meals.stream().forEach(System.out::println);
+					return meals;
+				});
+			}else {
+				System.out.println("was closed");
+			}
+			return state;
+		});
 	}
 
 	/**
