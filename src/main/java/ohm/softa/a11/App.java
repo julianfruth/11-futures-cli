@@ -58,29 +58,13 @@ public class App {
 		 * at first get a page without an index to be able to extract the required pagination information
 		 * afterwards you can iterate the remaining pages
 		 * keep in mind that you should await the process as the user has to select canteen with a specific id */
-		getInstance().getOpenMensaAPI().getCanteens().thenApply(PageInfo::extractFromResponse).thenApply(pI ->{
-			for(int i = 0; i < pI.getTotalCountOfPages(); i++){
-				 getInstance().getOpenMensaAPI().getCanteens(i).thenApply(page->{
+		getInstance().getOpenMensaAPI().getCanteens().thenApply(PageInfo::extractFromResponse).thenAccept(pI ->{
+			for(int i = 0; i < pI.getTotalCountOfPages(); i++) {
+				getInstance().getOpenMensaAPI().getCanteens(i).thenAccept(page -> {
 					page.forEach(System.out::println);
-					return page;
 				});
 			}
-			return  pI;
 		});
-
-		getInstance().getOpenMensaAPI().getCanteens().thenApply(res->{
-			Response<List<Canteen>> canteensRes = res;
-			PageInfo pageINfo = PageInfo.extractFromResponse(canteensRes);
-
-			for(int i = 0; i < pageINfo.getTotalCountOfPages(); i++){
-				getInstance().getOpenMensaAPI().getCanteens(i).thenApply(page->{
-					page.forEach(System.out::println);
-					return page;
-				});
-			}
-			return  canteensRes;
-		});
-
 	}
 
 	private static void printMeals() {
@@ -90,18 +74,16 @@ public class App {
 
 
 		final String timeStr = dateFormat.format(currentDate.getTime());
-		openMensaAPI.getCanteenState(currentCanteenId, timeStr ).thenApply(state ->
+		openMensaAPI.getCanteenState(currentCanteenId, timeStr ).thenAccept(state ->
 		{
 			if(!state.isClosed()){
-				openMensaAPI.getMeals(currentCanteenId, timeStr ).thenApply(meals ->
+				openMensaAPI.getMeals(currentCanteenId, timeStr ).thenAccept(meals ->
 				{
 					meals.stream().forEach(System.out::println);
-					return meals;
 				});
 			}else {
 				System.out.println("was closed");
 			}
-			return state;
 		});
 	}
 
