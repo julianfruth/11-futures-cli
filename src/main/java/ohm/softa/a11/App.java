@@ -78,9 +78,7 @@ public class App {
 		{
 			if(!state.isClosed()){
 				openMensaAPI.getMeals(currentCanteenId, timeStr ).thenAccept(meals ->
-				{
-					meals.stream().forEach(System.out::println);
-				});
+					meals.stream().forEach(System.out::println));
 			}else {
 				System.out.println("was closed");
 			}
